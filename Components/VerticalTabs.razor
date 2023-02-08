@@ -1,0 +1,159 @@
+﻿@inject IJSRuntime jsRuntime
+@using System.Collections.Generic;
+@using System.Linq;
+
+<CascadingValue Value="this">
+	<div class="btn-group" role="group">
+		@foreach (VerticalTab tabItem in TabHeaderItems)
+		{
+		<button type="button"
+				class="btn @GetButtonClassForTab(tabItem)"
+				@onclick=@( () => ActivatePageForTab(tabItem) )>
+			
+		</button>
+		}
+	</div>
+	@ChildContent
+</CascadingValue>
+
+@code {
+    // Next line is needed so we are able to add <TabPage> components inside
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+
+    static int SectionCount = 10;
+    Dictionary<int, bool>
+        sectionMapList = Enumerable.Range(0, SectionCount).Select(idx =>
+        new
+        {
+            Key = idx,
+            Value = true
+        })
+        .ToDictionary(x => x.Key, x => x.Value);
+
+
+
+    public VerticalTab ActiveTab { get; set; }
+
+    List<VerticalTab> TabHeaderItems = new List<VerticalTab>();
+
+
+
+    internal List<VerticalTab> GetTabItems()
+    {
+        return TabHeaderItems;
+    }
+
+
+
+    internal Dictionary<int, bool> GetSectionMaps()
+    {
+        return sectionMapList;
+    }
+
+
+
+    internal int GetSectionCount(){
+        return TabHeaderItems.Count();
+    }
+
+
+    internal int GetSectionIndex(VerticalTab tabHeader)
+    {
+        return TabHeaderItems.FindIndex(t => t.Text == tabHeader.Text);
+
+    }
+
+    internal bool GetSectionVisibility(VerticalTab tabHeader)
+    {
+        var idx= TabHeaderItems.FindIndex(t => t.Text == tabHeader.Text);
+        if (idx == 0) return true;
+        if (idx == 1) return true;
+        if (idx==2)  return false;
+        return true;
+    }
+
+    internal void AddTabHeader(VerticalTab tabHeader)
+    {
+        TabHeaderItems.Add(tabHeader);
+        if (TabHeaderItems.Count == 1)
+            ActiveTab = tabHeader;
+        StateHasChanged();
+    }
+
+    string GetButtonClassForTab(VerticalTab page) => page == ActiveTab ? "btn-primary" : "btn-secondary";
+    int CurrentSectionIndex = 0;
+
+    void ActivatePageForTab(VerticalTab page)
+    {
+        var idx = TabHeaderItems.FindIndex(t => t.Text == page.Text);
+        sectionMapList[idx] = true;
+        ActiveTab = page;
+
+        CurrentSectionIndex = idx;
+        var itemIndex = idx;
+        while (itemIndex >= 0)
+        {
+        sectionMapList[itemIndex] = false;
+        itemIndex = itemIndex - 1;
+        }
+        itemIndex = CurrentSectionIndex;
+        while (itemIndex < SectionCount - 1)
+        {
+        sectionMapList[itemIndex] = true;
+        itemIndex = itemIndex + 1;
+        }
+
+
+	}
+    
+        [JSInvokable]
+        public  void SetScrollPosition(string itemPosition)
+        {
+        if(itemPosition=="up"){
+        CurrentSectionIndex--;
+
+        if (CurrentSectionIndex <= 0) CurrentSectionIndex = 0;
+
+
+
+        }else{
+        CurrentSectionIndex++;
+
+        if (CurrentSectionIndex >= SectionCount-1) CurrentSectionIndex = SectionCount-1;
+
+
+        }
+
+        ActivatePageForTab(TabHeaderItems[CurrentSectionIndex]);
+    
+        StateHasChanged();
+
+
+        }
+
+
+    private DotNetObjectReference<VerticalTabs>
+? dotNetHelper;
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+        // Note: Here you initialize your elements, only once. When the user
+        // clicks on the li element, you'll call your required method from
+        // the click event handler dropMenu
+
+        if (firstRender)
+        {
+
+        dotNetHelper = DotNetObjectReference.Create(this);
+        //await jsRuntime.InvokeVoidAsync("setDotNetHelper",
+        //    dotNetHelper);
+
+
+        await jsRuntime.InvokeVoidAsync("PageLoaded",dotNetHelper);
+        }
+
+        }
+    [Parameter] public EventCallback<string> SelectedTabChanged { get; set; }
+}

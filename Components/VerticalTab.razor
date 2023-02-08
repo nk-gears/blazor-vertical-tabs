@@ -1,0 +1,47 @@
+﻿ 
+@{
+	var dispState = GetSectionState();
+}
+	<div style="display:@dispState">
+		@Parent.ActiveTab.Text
+		
+		@ChildContent
+	</div>
+ 
+
+
+@code {
+	[CascadingParameter]
+	private VerticalTabs Parent { get; set; }
+
+	[Parameter]
+	public bool SectionVisibility { get; set; } = false;
+
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> Notified { get; set; }
+
+	[Parameter]
+	public string Text { get; set; }
+
+
+	protected  string  GetSectionState()
+	{
+		var tabItems= Parent.GetTabItems();
+		var idx = tabItems.FindIndex(t => t.Text == this.Text);
+		var maps = Parent.GetSectionMaps();
+		return maps[idx]?"block":"none";
+
+	}
+
+	protected override void OnInitialized()
+	{
+		if (Parent == null)
+			throw new ArgumentNullException(nameof(Parent), "TabPage must exist within a TabControl");
+
+		base.OnInitialized();
+		Parent.AddTabHeader(this);
+	}
+}
